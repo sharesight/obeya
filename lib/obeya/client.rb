@@ -4,6 +4,8 @@ require 'faraday_middleware'
 module Obeya
   class Client
 
+    OBEYA_ROOT_URL = "https://beta.getobeya.com"
+
     def initialize(company_id, username, password)
       @company_id = company_id
       @username = username
@@ -87,7 +89,7 @@ module Obeya
     end
 
     def faraday
-      @faraday ||= Faraday.new("https://beta.getobeya.com").tap do |connection|
+      @faraday ||= Faraday.new(OBEYA_ROOT_URL).tap do |connection|
         connection.basic_auth(@username, @password)
         connection.request(:json)
       end
