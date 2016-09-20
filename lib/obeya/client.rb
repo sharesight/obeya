@@ -86,6 +86,12 @@ module Obeya
       end
     end
 
+    def tickets_in_named_bin(bin_name)
+      named_bin = bin(bin_name)
+      raise "Bin #{bin_name} not found" unless named_bin
+      tickets_in_bin(named_bin.id)
+    end
+
     def tickets_in_bin(bin_id)
       ticket_type_map = Hash[ticket_types.map { |t| [t.id, t] }]
       bin_map = Hash[bins.map { |b| [b.id, b] }]
@@ -95,6 +101,12 @@ module Obeya
           Ticket.from_obeya(ticket_data, ticket_type_map, bin_map, custom_fields)
         end
       end
+    end
+
+    def matching_tickets_in_named_bin(bin_name, title_matcher)
+      named_bin = bin(bin_name)
+      raise "Bin #{bin_name} not found" unless named_bin
+      matching_tickets_in_bin(named_bin.id, title_matcher)
     end
 
     def matching_tickets_in_bin(bin_id, title_matcher)
