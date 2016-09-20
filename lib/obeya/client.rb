@@ -1,10 +1,12 @@
 require 'faraday'
 require 'faraday_middleware'
+require 'date'
 
 module Obeya
   class Client
 
     OBEYA_ROOT_URL = "https://beta.getobeya.com"
+    CFTYPES = [::NilClass, ::String, ::Float, ::Integer, ::Array, ::Date]
 
     def initialize(company_id, username, password)
       @company_id = company_id
@@ -24,7 +26,8 @@ module Obeya
         merge(others)
       )
 
-      response = post("/tickets/#{next_ticket_id}", ticket.to_json)
+      ticket_to_json = ticket.to_json(custom_field_name_map)
+      response = post("/tickets/#{next_ticket_id}", ticket_to_json)
       case response.status
       when 200..299
         true
@@ -32,6 +35,20 @@ module Obeya
         puts "status: #{response.status}"
         puts "        #{response.inspect}"
         false
+      end
+    end
+
+    def update_ticket(id, other_fields)
+      ticket = Ticket.new(other_fields)
+
+      response = put("/tickets/#{id}", ticket.to_json(custom_field_name_map))
+      case response.status
+        when 200..299
+          true
+        else
+          puts "status: #{response.status}"
+          puts "        #{response.inspect}"
+          false
       end
     end
 
@@ -75,7 +92,7 @@ module Obeya
 
       @bin_tickets[bin_id] ||= begin
         get("/tickets?bin_id=#{bin_id}").map do |ticket_data|
-          Ticket.from_obeya(ticket_data, ticket_type_map, bin_map)
+          Ticket.from_obeya(ticket_data, ticket_type_map, bin_map, custom_fields)
         end
       end
     end
@@ -90,7 +107,20 @@ module Obeya
       end
     end
 
+    # Get custom fields as an array of id => {id, name, type}
+    def custom_fields
+      @custom_fields ||= begin
+        Hash[get('/custom-fields').map do |cf|
+          [cf['_id'], { id: cf['_id'], name: cf['name'], type: CFTYPES[cf['type'].to_i] }]
+        end]
+      end
+    end
+
     private
+
+    def custom_field_name_map
+      @custom_field_name_map ||= Hash[custom_fields.values.map {|v| [v[:name], v] }]
+    end
 
     def next_ticket_id
       get('/ids?amount=1')[0]
@@ -101,13 +131,19 @@ module Obeya
         request.headers.update({ accept: 'application/json', content_type: 'application/json' })
       end
       unless response.success?
-        raise("Obeya #{api_path} call failsed")
+        raise("Obeya #{api_path} call failed")
       end
       JSON.parse(response.body)
     end
 
     def post(api_path, json)
       faraday.post("/rest/1/#{@company_id}#{api_path}", json) do |request|
+        request.headers.update({ accept: 'application/json', content_type: 'application/json' })
+      end
+    end
+
+    def put(api_path, json)
+      faraday.put("/rest/1/#{@company_id}#{api_path}", json) do |request|
         request.headers.update({ accept: 'application/json', content_type: 'application/json' })
       end
     end

@@ -22,6 +22,7 @@ class ClientTest < Minitest::Test
       stub_ticket_types
       stub_bins
       stub_next_ticket_id
+      stub_custom_fields
 
       @client = Obeya::Client.new('company_id', 'username', 'password')
     end
@@ -118,6 +119,7 @@ class ClientTest < Minitest::Test
       stub_bins
       stub_ticket_types
       stub_tickets_in_bin
+      stub_custom_fields
 
       @client = Obeya::Client.new('company_id', 'username', 'password')
     end
@@ -165,6 +167,13 @@ class ClientTest < Minitest::Test
     )
   end
 
+  def stub_custom_fields
+    stub_request(:get, "#{Obeya::Client::OBEYA_ROOT_URL}/rest/1/company_id/custom-fields").to_return(
+        status: 200,
+        body: [{name: 'First seen', _id: 1, type: 1}, {name: 'Last seen', _id: 2, type: 1}]
+    )
+  end
+
   def stub_next_ticket_id
     stub_request(:get, "#{Obeya::Client::OBEYA_ROOT_URL}/rest/1/company_id/ids?amount=1").to_return(
       status: 200,
@@ -181,14 +190,15 @@ class ClientTest < Minitest::Test
 
   def stub_create_ticket_with_extras
     request_body = {'name':'title','description':'description','rtformat':'text','ticketType_id':1,'bin_id':1,
-        "First seen":"2016-01-01","Last seen":"2016-01-15"}.to_json
+      'customFields': {'1': "2016-01-01",
+                        '2': "2016-01-15"}}.to_json
+
     stub_request(:post, "#{Obeya::Client::OBEYA_ROOT_URL}/rest/1/company_id/tickets/13").
         with(body: request_body).
         to_return(status: 200, body: "")
   end
 
   def stub_tickets_in_bin
-
     stub_request(:get, "#{Obeya::Client::OBEYA_ROOT_URL}/rest/1/company_id/tickets?bin_id=1").
         to_return(status: 200, body: TEST_TICKETS.to_json)
   end

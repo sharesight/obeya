@@ -14,8 +14,8 @@ module Obeya
       end
     end
 
-    def self.from_obeya(src_hash, ticket_types, bins)
-      Obeya::Ticket.new Hash[
+    def self.from_obeya(src_hash, ticket_types, bins, custom_fields)
+      ticket_fields = Hash[
         src_hash.map do |obeya_name, field_value|
           case(obeya_name)
             when 'rtformat'
@@ -26,15 +26,23 @@ module Obeya
               [:ticket_type, ticket_types[field_value.to_i]]
             when 'bin_id'
               [:bin, bins[field_value.to_i]]
+            when 'customFields'
+              nil
             else
               [obeya_name.to_sym, field_value]
           end
-        end
+        end.compact
       ]
+
+      (src_hash['customFields'] || []).each do |custom_field_id, value|
+        ticket_fields[custom_fields[custom_field_id][:name]] = value
+      end
+
+      Obeya::Ticket::new(ticket_fields)
     end
 
-    def to_obeya
-      Hash[@ticket_fields.map do |field_name, field_value|
+    def to_obeya(custom_field_name_map)
+      obeya_fields = Hash[@ticket_fields.map do |field_name, field_value|
         case(field_name)
           when :format
             ['rtformat', field_value]
@@ -47,13 +55,40 @@ module Obeya
           when :bin
             ['bin_id', field_value.id]
           else
-            [field_name.to_s, field_value]
+            nil
         end
-      end]
+      end.compact
+      ]
+
+      custom_fields = @ticket_fields.select {|fn, _v| ![:format, :title, :description, :ticket_type, :bin].include?(fn) }
+      if custom_fields && !custom_fields.empty?
+        obeya_fields['customFields'] =
+          Hash[custom_fields.map do |fn, v|
+            fdef = custom_field_name_map[fn.to_s]
+            [fdef[:id], cast_to_obeya(v, fdef[:type])]
+          end]
+      end
+
+      obeya_fields
     end
 
-    def to_json
-      to_obeya.to_json
+    def cast_to_obeya(value, type)
+      case type.to_s
+        when 'String'
+          value.to_s
+        when 'Float'
+          value.to_f
+        when 'Integer'
+          value.to_i
+        when 'Array'
+          value
+        when 'Date'
+          Date.parse(value.to_s).strftime('%Y-%m-%dT%H:%M:%S.%LZ')
+      end
+    end
+
+    def to_json(custom_field_name_map)
+      to_obeya(custom_field_name_map).to_json
     end
 
     def method_missing(name)
