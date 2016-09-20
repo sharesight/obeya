@@ -42,7 +42,7 @@ module Obeya
       ticket = Ticket.new(other_fields)
 
       out_fields = ticket.to_json(custom_field_name_map)
-      pp put_fields
+      pp out_fields
       response = put("/tickets/#{id}", out_fields)
       case response.status
         when 200..299
