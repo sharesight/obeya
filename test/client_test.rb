@@ -2,6 +2,21 @@ require 'test_helper'
 
 class ClientTest < Minitest::Test
 
+  TEST_TICKETS = [
+      { '_id' => '1',
+        'name' => 'Test ticket 1',
+        'description' => 'This is a test',
+        'bin_id' => '1',
+        'ticketType_id' => '1',
+        'order' => 100},
+      { '_id' => '2',
+        'name' => 'Other test ticket 2',
+        'description' => 'This is another test',
+        'bin_id' => '1',
+        'ticketType_id' => '1',
+        'order' => 101}
+  ]
+
   context "creating tickets" do
     should "succeed" do
       stub_ticket_types
@@ -71,6 +86,42 @@ class ClientTest < Minitest::Test
     end
   end
 
+  context 'load tickets from bin' do
+    setup do
+      stub_bins
+      stub_ticket_types
+      stub_tickets_in_bin
+
+      @client = Obeya::Client.new('company_id', 'username', 'password')
+    end
+
+    should 'succeed for all tickets' do
+      all_tickets = @client.tickets_in_bin(1)
+
+      assert_equal 2, all_tickets.size
+      assert_equal 'Test ticket 1', all_tickets.first.title
+      assert_equal 'This is a test', all_tickets.first.description
+      assert_equal 'Alpha', all_tickets.first.bin.name
+      assert_equal 'bug', all_tickets.first.ticket_type.name
+
+      assert_equal 'Other test ticket 2', all_tickets.last.title
+      assert_equal 'This is another test', all_tickets.last.description
+      assert_equal 'Alpha', all_tickets.last.bin.name
+      assert_equal 'bug', all_tickets.last.ticket_type.name
+    end
+
+    should 'succeed with matcher' do
+      all_tickets = @client.matching_tickets_in_bin(1, /Other/)
+
+      assert_equal 1, all_tickets.size
+      assert_equal 'Other test ticket 2', all_tickets.last.title
+      assert_equal 'This is another test', all_tickets.last.description
+      assert_equal 'Alpha', all_tickets.last.bin.name
+      assert_equal 'bug', all_tickets.last.ticket_type.name
+    end
+
+  end
+
   private
 
   def stub_bins
@@ -95,10 +146,16 @@ class ClientTest < Minitest::Test
   end
 
   def stub_create_ticket
-    request_body = "{\"name\":\"title\",\"rtformat\":\"text\",\"description\":\"description\",\"bin_id\":1,\"ticketType_id\":1}"
+    request_body = "{\"name\":\"title\",\"description\":\"description\",\"rtformat\":\"text\",\"ticketType_id\":1,\"bin_id\":1}"
     stub_request(:post, "#{Obeya::Client::OBEYA_ROOT_URL}/rest/1/company_id/tickets/13").
       with(body: request_body).
       to_return(status: 200, body: "")
+  end
+
+  def stub_tickets_in_bin
+
+    stub_request(:get, "#{Obeya::Client::OBEYA_ROOT_URL}/rest/1/company_id/tickets?bin_id=1").
+        to_return(status: 200, body: TEST_TICKETS.to_json)
   end
 
 end

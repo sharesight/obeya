@@ -10,6 +10,8 @@ module Obeya
       @company_id = company_id
       @username = username
       @password = password
+
+      @bin_tickets = {}
     end
 
     def create_ticket(title, description, format: 'text', ticket_type_name: 'Bug', bin_name: /please panic/i)
@@ -63,6 +65,27 @@ module Obeya
         get('/ticket-types').map do |bin_data|
           TicketType.new(bin_data['_id'], bin_data['name'])
         end
+      end
+    end
+
+    def tickets_in_bin(bin_id)
+      ticket_type_map = Hash[ticket_types.map { |t| [t.id, t] }]
+      bin_map = Hash[bins.map { |b| [b.id, b] }]
+
+      @bin_tickets[bin_id] ||= begin
+        get("/tickets?bin_id=#{bin_id}").map do |ticket_data|
+          Ticket.from_obeya(ticket_data, ticket_type_map, bin_map)
+        end
+      end
+    end
+
+    def matching_tickets_in_bin(bin_id, title_matcher)
+      tickets = tickets_in_bin(bin_id)
+      case title_matcher
+      when String
+        tickets.select { |t| t.title == title_matcher }
+      when Regexp
+        tickets.select { |t| t.title =~ title_matcher }
       end
     end
 
