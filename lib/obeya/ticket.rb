@@ -41,7 +41,7 @@ module Obeya
       Obeya::Ticket::new(ticket_fields)
     end
 
-    def to_obeya(custom_field_name_map)
+    def to_obeya(custom_field_name_map, for_update=false)
       obeya_fields = Hash[@ticket_fields.map do |field_name, field_value|
         case(field_name)
           when :format
@@ -55,18 +55,25 @@ module Obeya
           when :bin
             ['bin_id', field_value.id]
           else
-            nil
+            if for_update
+              fdef = custom_field_name_map[field_name.to_s]
+              ["customFields.#{fdef[:id]}", cast_to_obeya(v, fdef[:type])]
+            else
+              nil
+            end
         end
       end.compact
       ]
 
-      custom_fields = @ticket_fields.select {|fn, _v| ![:format, :title, :description, :ticket_type, :bin].include?(fn) }
-      if custom_fields && !custom_fields.empty?
-        obeya_fields['customFields'] =
-          Hash[custom_fields.map do |fn, v|
-            fdef = custom_field_name_map[fn.to_s]
-            [fdef[:id], cast_to_obeya(v, fdef[:type])]
-          end]
+      unless for_update
+        custom_fields = @ticket_fields.select {|fn, _v| ![:format, :title, :description, :ticket_type, :bin].include?(fn) }
+        if custom_fields && !custom_fields.empty?
+          obeya_fields['customFields'] =
+            Hash[custom_fields.map do |fn, v|
+              fdef = custom_field_name_map[fn.to_s]
+              [fdef[:id], cast_to_obeya(v, fdef[:type])]
+            end]
+        end
       end
 
       obeya_fields
@@ -87,8 +94,8 @@ module Obeya
       end
     end
 
-    def to_json(custom_field_name_map)
-      to_obeya(custom_field_name_map).to_json
+    def to_json(custom_field_name_map, for_update=false)
+      to_obeya(custom_field_name_map, for_update).to_json
     end
 
     def method_missing(name)
