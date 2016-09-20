@@ -18,14 +18,18 @@ class ClientTest < Minitest::Test
   ]
 
   context "creating tickets" do
-    should "succeed" do
+    setup do
       stub_ticket_types
       stub_bins
       stub_next_ticket_id
+
+      @client = Obeya::Client.new('company_id', 'username', 'password')
+    end
+
+    should "succeed for standard params" do
       stub_create_ticket
 
-      client = Obeya::Client.new('company_id', 'username', 'password')
-      client.create_ticket(
+      @client.create_ticket(
         'title',
         'description',
         format: 'text',
@@ -33,6 +37,29 @@ class ClientTest < Minitest::Test
         bin_name: /alpha/i
       )
     end
+
+    should "succeed with defaulted params" do
+      stub_create_ticket
+
+      @client.create_ticket(
+          'title',
+          'description',
+          bin_name: /alpha/i
+      )
+    end
+
+    should "succeed with extra params" do
+      stub_create_ticket_with_extras
+
+      @client.create_ticket(
+          'title',
+          'description',
+          bin_name: /alpha/i,
+          'First seen': Date.new(2016,1,1),
+          'Last seen': Date.new(2016,1,15)
+      )
+    end
+
   end
 
   context "finding a ticket type" do
@@ -150,6 +177,14 @@ class ClientTest < Minitest::Test
     stub_request(:post, "#{Obeya::Client::OBEYA_ROOT_URL}/rest/1/company_id/tickets/13").
       with(body: request_body).
       to_return(status: 200, body: "")
+  end
+
+  def stub_create_ticket_with_extras
+    request_body = {'name':'title','description':'description','rtformat':'text','ticketType_id':1,'bin_id':1,
+        "First seen":"2016-01-01","Last seen":"2016-01-15"}.to_json
+    stub_request(:post, "#{Obeya::Client::OBEYA_ROOT_URL}/rest/1/company_id/tickets/13").
+        with(body: request_body).
+        to_return(status: 200, body: "")
   end
 
   def stub_tickets_in_bin

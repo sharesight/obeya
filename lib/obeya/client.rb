@@ -14,13 +14,14 @@ module Obeya
       @bin_tickets = {}
     end
 
-    def create_ticket(title, description, format: 'text', ticket_type_name: 'Bug', bin_name: /please panic/i)
-      ticket = Ticket.new(
-        title,
-        description,
-        format,
-        ticket_type(ticket_type_name),
-        bin(bin_name)
+    def create_ticket(title, description, format: 'text', ticket_type_name: 'bug', bin_name: /please panic/i, **others)
+      ticket = Ticket.new({
+        title: title,
+        description: description,
+        format: format,
+        ticket_type: ticket_type(ticket_type_name),
+        bin: bin(bin_name) }.
+        merge(others)
       )
 
       response = post("/tickets/#{next_ticket_id}", ticket.to_json)
