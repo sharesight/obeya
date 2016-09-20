@@ -57,7 +57,7 @@ module Obeya
           else
             if for_update
               fdef = custom_field_name_map[field_name.to_s]
-              ["customFields.#{fdef[:id]}", cast_to_obeya(v, fdef[:type])]
+              ["customFields.#{fdef[:id]}", cast_to_obeya(field_value, fdef[:type])]
             else
               nil
             end
@@ -69,9 +69,9 @@ module Obeya
         custom_fields = @ticket_fields.select {|fn, _v| ![:format, :title, :description, :ticket_type, :bin].include?(fn) }
         if custom_fields && !custom_fields.empty?
           obeya_fields['customFields'] =
-            Hash[custom_fields.map do |fn, v|
-              fdef = custom_field_name_map[fn.to_s]
-              [fdef[:id], cast_to_obeya(v, fdef[:type])]
+            Hash[custom_fields.map do |field_name, field_value|
+              fdef = custom_field_name_map[field_name.to_s]
+              [fdef[:id], cast_to_obeya(field_value, fdef[:type])]
             end]
         end
       end
