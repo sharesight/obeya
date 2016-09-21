@@ -63,6 +63,48 @@ class ClientTest < Minitest::Test
 
   end
 
+  context "updating tickets" do
+    setup do
+      stub_ticket_types
+      stub_bins
+      stub_next_ticket_id
+      stub_custom_fields
+      stub_create_ticket
+
+      @client = Obeya::Client.new('company_id', 'username', 'password')
+
+      @client.create_ticket(
+          'title',
+          'description',
+          format: 'text',
+          ticket_type_name: 'bug',
+          bin_name: /alpha/i
+      )
+    end
+
+    should "succeed for standard params" do
+      stub_update_ticket
+
+      @client.update_ticket(
+          123,
+          title: 'updated title',
+          description: 'updated description'
+      )
+    end
+
+    should "succeed for custom params" do
+      stub_update_ticket_custom
+
+      @client.update_ticket(
+          123,
+          title: 'updated title',
+          description: 'updated description',
+          'Last seen': Date.new(2016,1,20)
+      )
+    end
+
+  end
+
   context "finding a ticket type" do
     should "succeed" do
       stub_ticket_types
@@ -186,6 +228,20 @@ class ClientTest < Minitest::Test
     stub_request(:post, "#{Obeya::Client::OBEYA_ROOT_URL}/rest/1/company_id/tickets/13").
       with(body: request_body).
       to_return(status: 200, body: "")
+  end
+
+  def stub_update_ticket
+    request_body = "{\"name\":\"updated title\",\"description\":\"updated description\"}"
+    stub_request(:put, "#{Obeya::Client::OBEYA_ROOT_URL}/rest/1/company_id/tickets/123").
+        with(body: request_body).
+        to_return(status: 200, body: "")
+  end
+
+  def stub_update_ticket_custom
+    request_body = "{\"name\":\"updated title\",\"description\":\"updated description\",\"customFields.2\":\"2016-01-20\"}"
+    stub_request(:put, "#{Obeya::Client::OBEYA_ROOT_URL}/rest/1/company_id/tickets/123").
+        with(body: request_body).
+        to_return(status: 200, body: "")
   end
 
   def stub_create_ticket_with_extras

@@ -98,6 +98,10 @@ module Obeya
       to_obeya(custom_field_name_map, for_update).to_json
     end
 
+    def [](name)
+      @ticket_fields[name]
+    end
+
     def method_missing(name)
       return @ticket_fields[name] if @ticket_fields.key?(name)
 
