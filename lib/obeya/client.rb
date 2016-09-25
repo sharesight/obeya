@@ -6,12 +6,13 @@ module Obeya
   class Client
 
     OBEYA_ROOT_URL = "https://beta.getobeya.com"
-    CFTYPES = [::NilClass, ::String, ::Float, ::Integer, ::Array, ::Date]
+    CUSTOM_FIELD_TYPES = [::NilClass, ::String, ::Float, ::Integer, ::Array, ::Date]
 
-    def initialize(company_id, username, password)
+    def initialize(company_id, username, password, logger=nil)
       @company_id = company_id
       @username = username
       @password = password
+      @logger = logger
 
       @bin_tickets = {}
     end
@@ -32,8 +33,8 @@ module Obeya
       when 200..299
         true
       else
-        puts "status: #{response.status}"
-        puts "        #{response.inspect}"
+        log_warn "status: #{response.status}"
+        log_warn "        #{response.inspect}"
         false
       end
     end
@@ -46,8 +47,8 @@ module Obeya
         when 200..299
           true
         else
-          puts "status: #{response.status}"
-          puts "        #{response.inspect}"
+          log_warn "status: #{response.status}"
+          log_warn "        #{response.inspect}"
           false
       end
     end
@@ -119,11 +120,11 @@ module Obeya
       end
     end
 
-    # Get custom fields as an array of id => {id, name, type}
+    # Get custom fields as a hash of id => {id, name, type}
     def custom_fields
       @custom_fields ||= begin
         Hash[get('/custom-fields').map do |cf|
-          [cf['_id'], { id: cf['_id'], name: cf['name'], type: CFTYPES[cf['type'].to_i] }]
+          [cf['_id'], { id: cf['_id'], name: cf['name'], type: CUSTOM_FIELD_TYPES[cf['type'].to_i] }]
         end]
       end
     end
@@ -165,6 +166,10 @@ module Obeya
         connection.basic_auth(@username, @password)
         connection.request(:json)
       end
+    end
+
+    def log_warn(s)
+      @logger.warn(s) if @logger
     end
 
   end
