@@ -1,5 +1,8 @@
 # Obeya
 
+[![Gem Version](https://badge.fury.io/rb/obeya.svg)](http://badge.fury.io/rb/obeya)
+[![Build Status](https://travis-ci.org/sharesight/obeya.svg?branch=master)](https://travis-ci.org/sharesight/obeya)
+
 The `obeya` gem provides a wrapper around the
 [Obeya API](https://beta.getobeya.com/public/rest-help.html)
 
